@@ -1,46 +1,132 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import {
+  StyleSheet,
+  Text, View,
+  TextInput, TouchableOpacity,
+  FlatList, KeyboardAvoidingView, Platform,
+  Keyboard, Alert,
+  AsyncStorage
+} from 'react-native';
 
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 export default function App() {
   //salvo a lista
-  const [task, setTask] = useState(['Gabriel', 'Dany', 'Maria']);
-  //salvo o imput
+  const [task, setTask] = useState([]);
+  //salvo o imput e recebe o valor do imput
   const [newTask, setNewTask] = useState('');
 
+  //ADICIONAR e setar o imput como vazio para limpar ele e verificar se tem tarefas iguais 
+  async function addTask() {
+
+    if (newTask === "") {
+      return;
+    }
+
+    const search = task.filter(task => task === newTask);
+
+    if (search.length !== 0) {
+      Alert.alert("Atenção", "Nome da tarefa Repetido!");
+      return;
+    }
+
+    setTask([...task, newTask]);
+    setNewTask('');
+
+    Keyboard.dismiss();
+  }
+
+  // remover tarefa
+  async function removeTask(item) {
+
+    Alert.alert(
+      "Deletar Tarefa",
+      "Tem Certeza que deseja remover esta tarefa?",
+      [
+        {
+          text: "Cancelar",
+          onPress: () => {
+            return;
+          },
+          style: 'cancel'
+        },
+        {
+          text: "Ok",
+          onPress: () => setTask(task.filter(tasks => tasks !== item))
+        }
+      ],
+      { cancelable: false }
+    );
+    setTask(task.filter(tasks => tasks !== item));
+
+  }
+  // dispara  uma função com situação x 
+  useEffect(() => {
+    async function carregaDados() {
+      const task = await AsyncStorage.getItem("task");
+
+      if (task) {
+        setTask(JSON.parse(task));
+      }
+    }
+    carregaDados();
+  }, [])
 
 
-
+  useEffect(() => {
+    async function salvaDados() {
+      AsyncStorage.setItem("task", JSON.stringify(task))
+    }
+    salvaDados();
+  }, [task])
 
   return (
     <>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        keyboardVerticalOffset={0}
+        behavior="padding"
+        style={{ flex: 1 }}
+        enabled={Platform.OS === 'ios'}
+      >
+        <View style={styles.container}>
 
-        <View style={styles.Body}>
-          <FlatList styles={styles.FlatList}
-            data={task}
-            keyExtractor={item => item.toString()}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => <Text>{item} </Text>}
+          <View style={styles.Body}>
+            <FlatList styles={styles.FlatList}
+              data={task}
+              keyExtractor={item => item.toString()}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View style={styles.ContainerView}>
+                  <Text style={styles.Texto}> {item} </Text>
+                  <TouchableOpacity onPress={() => removeTask(item)}>
+                    <MaterialIcons name="delete-forever"
+                      size={25}
+                      color="#f64c75" />
+                  </TouchableOpacity>
+                </View>
+              )}
 
-          />
+            />
+          </View>
+          <View style={styles.Form}>
+            {/* Adicione uma tarefa  */}
+            <TextInput
+              style={styles.Input}
+              placeholderTextColor="#999"
+              autoCorrect={true}
+              placeholder="Adicione Uma Tarefa"
+              maxLength={50}
+              onChangeText={text => setNewTask(text)}
+              value={newTask}
+            />
+            {/* botão add */}
+            <TouchableOpacity style={styles.Button} onPress={() => addTask()}>
+              <Ionicons name="ios-add" size={25} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
         </View>
-        <View style={styles.Form}>
-          <TextInput
-            style={styles.Input}
-            placeholderTextColor="#999"
-            autoCorrect={true}
-            placeholder="Adicione Uma Tarefa"
-            maxLength={50}
-          />
-          <TouchableOpacity style={styles.Button}>
-            <Ionicons name="ios-add" size={25} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-      </View>
-
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -55,7 +141,7 @@ const styles = StyleSheet.create({
   },
   Body: {
     flex: 1,
-    backgroundColor: "#dcf8c6",
+    backgroundColor: "#ece5dd",
 
   },
   Form: {
@@ -91,6 +177,26 @@ const styles = StyleSheet.create({
   FlatList: {
     flex: 1,
     marginTop: 25,
+  },
+  ContainerView: {
+    marginBottom: 15,
+    padding: 15,
+    borderRadius: 4,
+    backgroundColor: "#dcf8c6",
 
-  }
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#ece5dd",
+  },
+
+  Texto: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "bold",
+    marginTop: 4,
+    textAlign: "center",
+  },
 });
